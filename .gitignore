@@ -1,0 +1,31 @@
+# Base de datos SQLite
+data/*.db
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribución / empaquetado
+dist/
+build/
+*.egg-info/
+
+# Entornos virtuales
+venv/
+env/
+ENV/
+.env
+
+# IDEs y editores
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
