@@ -1,24 +1,27 @@
-# 💼 Gestor de Inversiones Doméstico
+# 💼 Gestor de Inversiones en Criptoactivos
 
-Una herramienta en Python para registrar, consultar y gestionar inversiones personales (CRYPTO y ETFs) usando SQLite. Diseñada para uso local en Linux, permitiéndote mantener un registro detallado de tus inversiones con su costo en dólares y moneda local.
+Una herramienta en Python para registrar y gestionar transacciones de criptoactivos (compras y ventas) usando SQLite. Diseñada para uso local en Linux, permitiéndote mantener un registro detallado de todas tus operaciones con su costo en dólares y moneda local.
 
 ## 🎯 Propósito
 
-Este proyecto nace de la necesidad de mantener un registro claro y organizado de inversiones personales, especialmente útil para:
+Este proyecto nace de la necesidad de mantener un registro claro y organizado de transacciones de criptoactivos (compras y ventas), especialmente útil para:
 
-- 📊 Seguimiento de inversiones en múltiples activos (CRYPTO/ETFs)
-- 💵 Control de costos y tipo de cambio al momento de la compra
-- 📈 Análisis histórico de transacciones
-- 🧮 Base para cálculos impositivos y rendimientos
+- 📊 Seguimiento de operaciones en múltiples criptoactivos (BTC, ETH, ADA, etc.)
+- 💵 Control de costos y tipo de cambio al momento de cada transacción
+- 📈 Análisis histórico de compras y ventas
+- 🧮 Base para cálculos impositivos y análisis de rentabilidad
 
 ## 🚀 Características
 
-- ✨ Registro de compras con:
-  - Tipo de activo (CRYPTO/ETF)
+- ✨ Registro de transacciones (compras y ventas):
+  - Criptoactivos: BTC, ETH, ADA, etc.
+  - Tipo de operación: COMPRA o VENTA
   - Cantidad y precio unitario
   - Costo total (incluyendo comisiones)
-  - Tipo de cambio del dólar al momento de la compra
+  - Tipo de cambio del dólar al momento de la transacción
 - 📋 Consulta de transacciones con formato tabular
+- 🔍 Filtros avanzados (por activo, tipo de operación, rango de fechas)
+- ✏️ Actualización de registros sin necesidad de borrar
 - 🗑️ Gestión de registros (borrado de transacciones)
 - 🔒 Almacenamiento local en SQLite
 - 💻 Interfaz de línea de comandos intuitiva
@@ -46,61 +49,89 @@ pip install -e .
 
 ## 🎮 Uso
 
-### Registrar una nueva compra:
+### Registrar una nueva transacción:
 ```bash
+# Registrar una compra
 python -m gestor_inversiones registro \
     --activo BTC \
-    --tipo CRYPTO \
-    --cantidad 0.1 \
-    --precio 35000 \
-    --costo 3500 \
-  --dolar 1000
+    --operacion COMPRA \
+    --cantidad 0.5 \
+    --precio 45000 \
+    --costo 22500 \
+    --dolar 1050
 
-# Si quieres registrar la transacción con una fecha diferente (por ejemplo, para movimientos atrasados
-# al aplicar DCA), usa la opción `--fecha` con formato ISO (YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS):
+# Registrar una venta
 python -m gestor_inversiones registro \
-  --activo BTC --tipo CRYPTO --cantidad 0.05 --precio 30000 --costo 1500 --dolar 1000 \
-  --fecha 2025-11-01
+    --activo BTC \
+    --operacion VENTA \
+    --cantidad 0.1 \
+    --precio 46000 \
+    --costo 4600 \
+    --dolar 1050
+
+# Registrar con fecha específica (para operaciones atrasadas)
+python -m gestor_inversiones registro \
+    --activo ETH --operacion COMPRA --cantidad 2 --precio 2500 --costo 5000 --dolar 1000 \
+    --fecha 2025-11-15
 ```
 
 ### Consultar transacciones:
-Puedes consultar todos tus registros o usar filtros opcionales para refinar la búsqueda:
-
 ```bash
-# Consultar todos los registros
+# Consultar todas las transacciones
 python -m gestor_inversiones consulta
+
+# Filtrar solo compras
+python -m gestor_inversiones consulta --operacion COMPRA
+
+# Filtrar solo ventas
+python -m gestor_inversiones consulta --operacion VENTA
 
 # Filtrar por activo específico
 python -m gestor_inversiones consulta --activo BTC
 
-# Filtrar por tipo de activo
-python -m gestor_inversiones consulta --tipo CRYPTO
-
 # Filtrar por rango de fechas
-python -m gestor_inversiones consulta --desde 2025-11-01 --hasta 2025-11-15
+python -m gestor_inversiones consulta --desde 2025-11-01 --hasta 2025-11-30
 
 # Combinar múltiples filtros
-python -m gestor_inversiones consulta --activo ETH --tipo CRYPTO --desde 2025-11-01 --hasta 2025-11-30
+python -m gestor_inversiones consulta --activo ETH --operacion COMPRA --desde 2025-11-01
 ```
 
 ### Actualizar una transacción:
-Puedes actualizar uno o más campos de un registro existente sin necesidad de borrarlo y crear uno nuevo:
-
 ```bash
-# Actualizar solo el nombre del activo (útil si te equivocaste al escribirlo)
-python -m gestor_inversiones actualizar --id 2 --activo ETH
+# Actualizar el nombre del activo
+python -m gestor_inversiones actualizar --id 1 --activo BTC
 
 # Actualizar múltiples campos
-python -m gestor_inversiones actualizar --id 2 --activo ETH --cantidad 0.08 --precio 2500
+python -m gestor_inversiones actualizar --id 1 --activo ETH --cantidad 2 --precio 2500
 
-# Actualizar la fecha de una transacción
-python -m gestor_inversiones actualizar --id 2 --fecha 2025-10-15
+# Cambiar el tipo de operación
+python -m gestor_inversiones actualizar --id 2 --operacion VENTA
+
+# Actualizar la fecha
+python -m gestor_inversiones actualizar --id 1 --fecha 2025-10-15
 ```
 
 ### Borrar una transacción:
 ```bash
 python -m gestor_inversiones borrar --id 1
 ```
+
+### Ver resumen de saldos (inventario):
+```bash
+# Mostrar saldo de cada activo y alertas sobre inventario negativo
+python -m gestor_inversiones resumen
+
+# Ejemplo de salida:
+# ============================================================
+# 📊 RESUMEN DE SALDOS POR ACTIVO
+# ============================================================
+# BTC      | Saldo:   0.40000000
+# ETH      | Saldo:   2.00000000
+# ============================================================
+# ✅ Todos los saldos son válidos (sin inventarios negativos).
+```
+
+**Nota:** Si registras una venta superior a tu inventario, se mostrará una ⚠️ **alerta en rojo** indicando el desequilibrio.
 
 ## 🧱 Estructura del Proyecto
 

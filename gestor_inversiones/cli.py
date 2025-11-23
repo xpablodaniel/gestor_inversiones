@@ -1,68 +1,82 @@
 import argparse
-from .crud import registrar_compra, consultar_registros, borrar_transaccion, actualizar_transaccion
+from .crud import registrar_compra, consultar_registros, borrar_transaccion, actualizar_transaccion, calcular_saldos
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Gestor de inversiones doméstico (CRYPTO/ETF) con SQLite.",
+        description="Gestor de inversiones en criptoactivos con SQLite.",
         epilog="Ejecuta 'python -m gestor_inversiones <comando> -h' para ayuda específica."
     )
     subparsers = parser.add_subparsers(dest='comando', required=True)
 
     # Subcomando: registro
-    parser_registro = subparsers.add_parser('registro', help='Registrar una nueva compra.')
-    parser_registro.add_argument('--activo', required=True)
-    parser_registro.add_argument('--tipo', required=True, choices=['CRYPTO', 'ETF'])
-    parser_registro.add_argument('--cantidad', required=True, type=float)
-    parser_registro.add_argument('--precio', dest='precio_unitario', required=True, type=float)
-    parser_registro.add_argument('--costo', dest='costo_total', required=True, type=float)
-    parser_registro.add_argument('--dolar', dest='dolar_cambio', required=True, type=float)
+    parser_registro = subparsers.add_parser('registro', help='Registrar una nueva transacción (compra o venta).')
+    parser_registro.add_argument('--activo', required=True, help='Nombre del criptoactivo (ej: BTC, ETH).')
+    parser_registro.add_argument('--operacion', required=True, choices=['COMPRA', 'VENTA'], 
+                                 help='Tipo de operación.')
+    parser_registro.add_argument('--cantidad', required=True, type=float, 
+                                 help='Cantidad en valores positivos.')
+    parser_registro.add_argument('--precio', dest='precio_unitario', required=True, type=float, 
+                                 help='Precio por unidad.')
+    parser_registro.add_argument('--costo', dest='costo_total', required=True, type=float, 
+                                 help='Monto total de la transacción.')
+    parser_registro.add_argument('--dolar', dest='dolar_cambio', required=True, type=float, 
+                                 help='Tipo de cambio del dólar.')
     parser_registro.add_argument('--fecha', dest='fecha', required=False,
-                                 help="Fecha de la transacción (YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS). Si se omite, se usa la fecha actual.)")
+                                 help="Fecha de la transacción (YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS). Si se omite, se usa la fecha actual.")
 
     # Subcomando: actualizar
     parser_actualizar = subparsers.add_parser('actualizar', help='Actualizar una transacción existente.')
     parser_actualizar.add_argument('--id', required=True, type=int, help='ID de la transacción a actualizar.')
     parser_actualizar.add_argument('--activo', required=False, help='Nuevo nombre del activo.')
-    parser_actualizar.add_argument('--tipo', required=False, choices=['CRYPTO', 'ETF'], help='Nuevo tipo de activo.')
+    parser_actualizar.add_argument('--operacion', required=False, choices=['COMPRA', 'VENTA'], 
+                                   help='Nueva operación.')
     parser_actualizar.add_argument('--cantidad', required=False, type=float, help='Nueva cantidad.')
-    parser_actualizar.add_argument('--precio', dest='precio_unitario', required=False, type=float, help='Nuevo precio unitario.')
-    parser_actualizar.add_argument('--costo', dest='costo_total', required=False, type=float, help='Nuevo costo total.')
-    parser_actualizar.add_argument('--dolar', dest='dolar_cambio', required=False, type=float, help='Nuevo tipo de cambio del dólar.')
-    parser_actualizar.add_argument('--fecha', dest='fecha', required=False, help='Nueva fecha (formato ISO: YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS).')
+    parser_actualizar.add_argument('--precio', dest='precio_unitario', required=False, type=float, 
+                                   help='Nuevo precio unitario.')
+    parser_actualizar.add_argument('--costo', dest='costo_total', required=False, type=float, 
+                                   help='Nuevo costo total.')
+    parser_actualizar.add_argument('--dolar', dest='dolar_cambio', required=False, type=float, 
+                                   help='Nuevo tipo de cambio del dólar.')
+    parser_actualizar.add_argument('--fecha', dest='fecha', required=False, 
+                                   help='Nueva fecha (formato ISO: YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS).')
 
     # Subcomando: consulta
-    parser_consulta = subparsers.add_parser('consulta', help='Consultar registros con filtros opcionales.')
+    parser_consulta = subparsers.add_parser('consulta', help='Consultar transacciones con filtros opcionales.')
     parser_consulta.add_argument('--activo', required=False, help='Filtrar por nombre de activo (ej: BTC, ETH).')
-    parser_consulta.add_argument('--tipo', required=False, choices=['CRYPTO', 'ETF'], help='Filtrar por tipo de activo.')
-    parser_consulta.add_argument('--desde', dest='fecha_desde', required=False, help='Filtrar desde una fecha (formato: YYYY-MM-DD).')
-    parser_consulta.add_argument('--hasta', dest='fecha_hasta', required=False, help='Filtrar hasta una fecha (formato: YYYY-MM-DD).')
+    parser_consulta.add_argument('--operacion', required=False, choices=['COMPRA', 'VENTA'], 
+                                 help='Filtrar por tipo de operación.')
+    parser_consulta.add_argument('--desde', dest='fecha_desde', required=False, 
+                                 help='Filtrar desde una fecha (formato: YYYY-MM-DD).')
+    parser_consulta.add_argument('--hasta', dest='fecha_hasta', required=False, 
+                                 help='Filtrar hasta una fecha (formato: YYYY-MM-DD).')
 
     # Subcomando: borrar
     parser_borrar = subparsers.add_parser('borrar', help='Borrar una transacción.')
-    parser_borrar.add_argument('--id', required=True, type=int)
+    parser_borrar.add_argument('--id', required=True, type=int, help='ID de la transacción a borrar.')
+
+    # Subcomando: resumen
+    parser_resumen = subparsers.add_parser('resumen', help='Mostrar saldo de cada activo y alertas.')
 
     args = parser.parse_args()
 
     if args.comando == 'registro':
-        # Pasar la fecha tal cual; `crud.registrar_compra` acepta string o datetime
         registrar_compra(
             args.activo,
-            args.tipo,
+            args.operacion,
             args.cantidad,
             args.precio_unitario,
             args.costo_total,
             args.dolar_cambio,
             fecha=args.fecha
         )
-        print("✅ Compra registrada exitosamente")
+        print(f"✅ {args.operacion.capitalize()} de {args.activo} registrada exitosamente")
 
     elif args.comando == 'actualizar':
-        # Recopilar solo los argumentos que fueron proporcionados
         campos_a_actualizar = {}
         if args.activo is not None:
             campos_a_actualizar['activo'] = args.activo
-        if args.tipo is not None:
-            campos_a_actualizar['tipo'] = args.tipo
+        if args.operacion is not None:
+            campos_a_actualizar['operacion'] = args.operacion
         if args.cantidad is not None:
             campos_a_actualizar['cantidad'] = args.cantidad
         if args.precio_unitario is not None:
@@ -84,10 +98,9 @@ def main():
             print(f"❌ No se encontró la transacción {args.id}")
 
     elif args.comando == 'consulta':
-        # Pasar los filtros a la función de consulta
         df = consultar_registros(
             activo=args.activo,
-            tipo=args.tipo,
+            operacion=args.operacion,
             fecha_desde=args.fecha_desde,
             fecha_hasta=args.fecha_hasta
         )
@@ -103,6 +116,32 @@ def main():
             print(f"✅ Transacción {args.id} eliminada exitosamente")
         else:
             print(f"❌ No se encontró la transacción {args.id}")
+
+    elif args.comando == 'resumen':
+        resultado = calcular_saldos()
+        saldos = resultado['saldos']
+        alertas = resultado['alertas']
+        
+        print("\n" + "="*60)
+        print("📊 RESUMEN DE SALDOS POR ACTIVO")
+        print("="*60)
+        
+        if not saldos:
+            print("No hay transacciones registradas.")
+        else:
+            for activo, saldo in sorted(saldos.items()):
+                # Mostrar saldo con formato apropiado
+                print(f"{activo:8} | Saldo: {saldo:12.8f}")
+        
+        print("="*60)
+        
+        # Mostrar alertas si las hay
+        if alertas:
+            print("\n🚨 ALERTAS DE INVENTARIO:")
+            for alerta in alertas:
+                print(alerta)
+        else:
+            print("\n✅ Todos los saldos son válidos (sin inventarios negativos).")
 
 if __name__ == "__main__":
     main()

@@ -13,7 +13,7 @@ def get_db_connection():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             activo TEXT NOT NULL,
-            tipo TEXT CHECK(tipo IN ('CRYPTO', 'ETF')) NOT NULL,
+            operacion TEXT CHECK(operacion IN ('COMPRA', 'VENTA')) NOT NULL,
             cantidad REAL NOT NULL,
             precio_unitario REAL NOT NULL,
             costo_total REAL NOT NULL,
