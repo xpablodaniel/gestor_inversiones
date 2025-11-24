@@ -269,6 +269,50 @@ python -m gestor_inversiones exportar --formato csv
 python -m gestor_inversiones importar --archivo respaldo.csv
 ```
 
+## 🛠️ Solución a: "table transacciones has no column named operacion"
+
+Si al ejecutar `registro` u otra operación recibes este error, significa que tu archivo de base de datos local fue creado con un esquema antiguo (sin la columna `operacion`) y el código actual espera esa columna.
+
+Qué hice (solución aplicada en este repositorio):
+- Añadí una comprobación y migración segura en `gestor_inversiones/db.py` — al abrir la base de datos el código ahora:
+    - crea la tabla `transacciones` si **no** existe,
+    - comprueba si la columna `operacion` está presente, y si falta la **añade** con ALTER TABLE y un valor por defecto `'COMPRA'`.
+
+Por qué funcionó aquí pero pudo fallar en el repositorio de trabajo (`github.com/hotel23demayo/gestor_inversiones`):
+
+1. Código desactualizado: si en el repo remoto no aplicaste (pull) los últimos cambios que contienen la migración, el proceso de arranque no intentará añadir la columna.
+2. Ruta o archivo distinto: tu instalación en el trabajo puede usar otra ruta o nombre de fichero para la DB (ej. `data/inversiones.db` vs `data/otro.db`).
+3. Permisos/lock: problemas de permisos o bloqueo (otro proceso usando el fichero) pueden impedir ALTER TABLE y entonces la migración falla silenciosamente.
+4. Versiones de Python/SQLite: entornos diferentes pueden comportarse distinto (aunque ALTER TABLE ADD COLUMN normalmente es compatible, versiones antiguas de SQLite pueden limitar operaciones más complejas).
+
+Pasos recomendados para reparar/manualizar en el repo del trabajo:
+
+- Verifica que tu copia del código está actualizada (pull) y que `db.py` incluye la lógica de migración.
+    ```bash
+    git pull origin main
+    ```
+- Comprueba la estructura actual de la tabla en la máquina de trabajo:
+    ```bash
+    python3 - << 'PY'
+    import sqlite3
+    conn = sqlite3.connect('data/inversiones.db')
+    print(list(conn.execute("PRAGMA table_info(transacciones);")))
+    conn.close()
+    PY
+    ```
+- Si falta `operacion`, respalda y aplica la migración manualmente (si no deseas borrar la DB):
+    ```bash
+    cp data/inversiones.db data/inversiones.db.bak
+    sqlite3 data/inversiones.db "ALTER TABLE transacciones ADD COLUMN operacion TEXT DEFAULT 'COMPRA';"
+    ```
+- Alternativa (si no necesitas conservar datos): borrar la DB y dejar que el código la recree con el esquema correcto
+    ```bash
+    rm data/inversiones.db
+    python3 -m gestor_inversiones registro --activo BTC --operacion COMPRA --cantidad 0.5 --precio 45000 --costo 22500 --dolar 1050
+    ```
+
+Recomendación de seguridad: siempre hacer una copia (`.bak`) antes de ejecutar ALTER TABLE en producción o en datos importantes.
+
 ## �📄 Licencia
 
 Este proyecto está bajo la Licencia MIT - ver el archivo LICENSE para más detalles.
